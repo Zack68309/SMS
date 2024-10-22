@@ -26,6 +26,22 @@ SECRET_KEY = 'django-insecure-^=90^x&^e-^cwc0vexqjdbhwiokbls@)@@4ymocs3bd_*)%2!i
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+# settings.py
+# settings.py
+
+# Session will last for 2 weeks (1209600 seconds)
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+
+# Whether to expire the session when the user closes the browser
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Save the session to the database on every request
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Use the database to store session data
+SESSION_ENGINE = "django.contrib.sessions.backends.db"  # Default is using the database
+# Alternatively, you could use cached sessions for performance
+# SESSION_ENGINE = "django.contrib.sessions.backends.cache"e session on every request Save session on every request
 
 
 # Application definition
@@ -38,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'sendsms',
+
 ]
 
 MIDDLEWARE = [
@@ -51,6 +68,10 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'SMS.urls'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://9c8c-154-160-0-196.ngrok-free.app',
+]
 
 TEMPLATES = [
     {

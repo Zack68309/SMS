@@ -18,9 +18,10 @@ from django.contrib import admin
 from django.urls import path
 from . import views
 
-from django.urls import path
-from . import views
+
 
 urlpatterns = [
-    path('', views.index, name='index'),  # Your SMS form
-    path('sms-callback/', views.sms_callback, name='sms_callback'),]
+    path('', views.index, name='index'),  # Main page for sending SMS
+    path('sms-callback/', views.sms_callback, name='sms_callback'),  # Callback URL for SMS
+    path('fetch-callbacks/', views.fetch_sms_callbacks, name='fetch_callbacks'),  # Endpoint to fetch SMS callbacks
+]

@@ -9,6 +9,52 @@
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <title>Send SMS</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        /* Custom styling for Delivery Report */
+        .delivery-report {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .delivery-report h4 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .delivery-report .list-group-item {
+            background-color: #fff;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .delivery-report .list-group-item:last-child {
+            border-bottom: none;
+        }
+
+        .delivery-report .list-group-item span.label {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .delivery-report .empty-report {
+            font-style: italic;
+            color: #888;
+            text-align: center;
+            padding: 15px;
+        }
+    </style>
 </head>
 <body>
 <div class="content">
@@ -22,13 +68,7 @@
                         <p><img src="{% static 'images/undraw-contact.svg' %}" alt="Image" class="img-fluid"></p>
                     </div>
                     <div class="col-md-6">
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-                            {% endfor %}
-                        {% endif %}
-                        
-                        <form class="mb-5" method="post" id="contactForm" name="contactForm" action= "">
+                        <form class="mb-5" method="post" id="contactForm" name="contactForm" action="">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-12 form-group">
@@ -39,7 +79,7 @@
                                 <div class="col-md-12 form-group">
                                     <textarea class="form-control" name="message" id="message" cols="30" rows="7" placeholder="Write your message" required></textarea>
                                 </div>
-                            </div>  
+                            </div>
                             <div class="row">
                                 <div class="col-12">
                                     <input type="submit" value="Send Message" class="btn btn-primary rounded-0 py-2 px-4">
@@ -50,9 +90,71 @@
                 </div>
             </div>
         </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <!-- Delivery Report Section -->
+                <div class="delivery-report">
+                    <h4>Delivery Report</h4>
+                    <ul id="callback-list" class="list-group">
+                        <li class="empty-report">No delivery report available yet.</li>
+                        <!-- Callback data will be appended here -->
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Remove the JavaScript imports that were used for validation -->
+<script>
+    // Function to fetch SMS callbacks and update the list
+    function fetchCallbacks() {
+        $.ajax({
+            url: '{% url "fetch_callbacks" %}',  // URL to fetch callbacks
+            method: 'GET',
+            success: function(data) {
+                $('#callback-list').empty();  // Clear the current list
+
+                // Check if there are any session or database callbacks
+                if (data.session_callbacks.length === 0 && !data.db_callback) {
+                    $('#callback-list').append(`
+                        <li class="empty-report">No delivery report available yet.</li>
+                    `);
+                    return;
+                }
+
+                // Display the session callbacks (if any)
+                if (data.session_callbacks.length > 0) {
+                    data.session_callbacks.forEach(function(item) {
+                        $('#callback-list').append(`
+                            <li class="list-group-item">
+                                <span class="label">Session Data</span>: ${JSON.stringify(item)}
+                            </li>
+                        `);
+                    });
+                }
+
+                // Display the database callback (if any)
+                if (data.db_callback) {
+                    $('#callback-list').append(`
+                        <li class="list-group-item">
+                            <span class="label">Destination:</span> ${data.db_callback.phone_number}<br>
+                            <span class="label">Mid:</span> ${data.db_callback.message}<br>
+                            <span class="label">Status:</span> ${data.db_callback.status}<br>
+                            <span class="label">Timestamp:</span> ${data.db_callback.timestamp}
+                        </li>
+                    `);
+                }
+            },
+            error: function(error) {
+                console.error('Error fetching callbacks:', error);
+            }
+        });
+    }
+
+    // Set an interval to fetch callbacks every 5 seconds
+    setInterval(fetchCallbacks, 5000);
+</script>
+
 </body>
 </html>
