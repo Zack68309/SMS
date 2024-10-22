@@ -4,6 +4,11 @@ from django.views.decorators.csrf import csrf_exempt
 import requests
 import json
 from .models import SMSCallback
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # Create your views here
 def index(request):
@@ -14,7 +19,7 @@ def index(request):
         # Prepare the API request data
         api_url = "https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/"
         payload = {
-            "key": "cj(@ysntf2@nx6do))9691je_)@3xn@8y2fdqzks5pn43)9d8ai4a2h3znha#l99",  # Your auth key
+            "key":  os.getenv("API_KEY"),  # Your auth key
             "msisdn": phone,  # Use the phone number(s) from the form
             "message": message,  # Use the message from the form
             "sender_id": "Test",  # Sender ID
