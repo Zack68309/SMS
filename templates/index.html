@@ -5,101 +5,92 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'fonts/icomoon/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <title>Send SMS</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <style>
-        /* Custom styling for Delivery Report */
-        .delivery-report {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .delivery-report h4 {
-            font-size: 24px;
-            font-weight: 700;
-            color: #333;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .delivery-report .list-group-item {
-            background-color: #fff;
-            border: none;
-            border-bottom: 1px solid #ddd;
-            padding: 15px;
-            font-size: 16px;
-        }
-
-        .delivery-report .list-group-item:last-child {
-            border-bottom: none;
-        }
-
-        .delivery-report .list-group-item span.label {
-            font-weight: bold;
-            color: #007bff;
-        }
-
-        .delivery-report .empty-report {
-            font-style: italic;
-            color: #888;
-            text-align: center;
-            padding: 15px;
-        }
+        .content { padding: 3rem 0; }
+        .card-box { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 24px; }
+        .counter { font-size: 13px; color: #888; }
+        .status { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eee; color: #555; }
+        .status.DELIVRD, .status.DELIVERED { background: #d4edda; color: #155724; }
+        .status.SUBMITTED { background: #d1ecf1; color: #0c5460; }
+        .status.PENDING { background: #fff3cd; color: #856404; }
+        .status.FAILED, .status.REJECTED, .status.UNDELIV, .status.EXPIRED { background: #f8d7da; color: #721c24; }
+        .config-note { font-size: 13px; word-break: break-all; }
+        #history td { font-size: 14px; vertical-align: middle; }
     </style>
 </head>
 <body>
 <div class="content">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10">
-                <div class="row justify-content-center">
-                    <div class="col-md-6">
-                        <h3 class="heading mb-4">Welcome to Zack SMS</h3>
-                        <p>Enter Recipient Number and Message</p>
-                        <p><img src="{% static 'images/undraw-contact.svg' %}" alt="Image" class="img-fluid"></p>
-                    </div>
-                    <div class="col-md-6">
-                        <form class="mb-5" method="post" id="contactForm" name="contactForm" action="">
+            <div class="col-lg-10">
+                <h3 class="heading mb-2">Zack SMS</h3>
+                <p class="mb-4">Send SMS through the Nalo API and watch delivery reports arrive.</p>
+
+                {% for m in messages %}
+                    <div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %}">{{ m }}</div>
+                {% endfor %}
+
+                {% if not api_key_set %}
+                    <div class="alert alert-warning">SMS_API_KEY is not set. Add it to <code>.env</code> and restart.</div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-7 mb-4">
+                        <form class="card-box" method="post" id="smsForm">
                             {% csrf_token %}
-                            <div class="row">
-                                <div class="col-md-12 form-group">
-                                    <input type="tel" class="form-control" name="phone" id="phone" placeholder="Your Phone Number" pattern="[0-9]{10,15}" required>
-                                </div>
+                            <div class="form-group">
+                                <label for="sender_id">Sender ID</label>
+                                <select class="form-control" name="sender_id" id="sender_id" required>
+                                    {% for s in sender_ids %}
+                                        <option value="{{ s }}">{{ s }}</option>
+                                    {% empty %}
+                                        <option value="" disabled selected>No sender IDs configured (SENDER_IDS)</option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <div class="row">
-                                <div class="col-md-12 form-group">
-                                    <textarea class="form-control" name="message" id="message" cols="30" rows="7" placeholder="Write your message" required></textarea>
-                                </div>
+                            <div class="form-group">
+                                <label for="phone">Phone number(s)</label>
+                                <input type="text" class="form-control" name="phone" id="phone"
+                                       placeholder="233244123456, 0201234567" required>
+                                <small class="form-text text-muted">Separate several numbers with commas. Local 0XX numbers are converted to 233XX.</small>
                             </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <input type="submit" value="Send Message" class="btn btn-primary rounded-0 py-2 px-4">
-                                </div>
+                            <div class="form-group">
+                                <label for="message">Message</label>
+                                <textarea class="form-control" name="message" id="message" rows="5" required></textarea>
+                                <div class="counter mt-1" id="counter">0 characters · 0 SMS</div>
                             </div>
+                            <button type="submit" class="btn btn-primary rounded-0 py-2 px-4">Send Message</button>
                         </form>
                     </div>
+                    <div class="col-md-5 mb-4">
+                        <img src="{% static 'images/undraw-contact.svg' %}" alt="" class="img-fluid mb-4">
+                        <div class="card-box config-note">
+                            <strong>Callback URL</strong>
+                            <p class="mb-2"><code>{{ callback_url }}</code></p>
+                            {% if callback_public %}
+                                <p class="text-success mb-0">Public. Delivery reports should arrive here.</p>
+                            {% else %}
+                                <p class="text-danger mb-0">This is a local address, so Nalo can't reach it. Open the app through your tunnel URL
+                                    (Cloudflare or ngrok) or set <code>CALLBACK_BASE_URL</code>.</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="row justify-content-center">
-            <div class="col-md-12">
-                <!-- Delivery Report Section -->
-                <div class="delivery-report">
-                    <h4>Delivery Report</h4>
-                    <ul id="callback-list" class="list-group">
-                        <li class="empty-report">No delivery report available yet.</li>
-                        <!-- Callback data will be appended here -->
-                    </ul>
+                <div class="card-box">
+                    <h4 class="mb-3">Message history</h4>
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="history">
+                            <thead>
+                            <tr><th>Sent</th><th>Sender</th><th>To</th><th>Message</th><th>Status</th><th>Network</th><th>Delivered</th></tr>
+                            </thead>
+                            <tbody><tr><td colspan="7" class="text-muted">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Refreshes every 5 seconds.</small>
                 </div>
             </div>
         </div>
@@ -107,54 +98,46 @@
 </div>
 
 <script>
-    // Function to fetch SMS callbacks and update the list
-    function fetchCallbacks() {
-        $.ajax({
-            url: '{% url "fetch_callbacks" %}',  // URL to fetch callbacks
-            method: 'GET',
-            success: function(data) {
-                $('#callback-list').empty();  // Clear the current list
+    const msg = document.getElementById('message');
+    const counter = document.getElementById('counter');
+    function updateCounter() {
+        const n = msg.value.length;
+        const parts = n === 0 ? 0 : (n <= 160 ? 1 : Math.ceil(n / 153));
+        counter.textContent = `${n} characters · ${parts} SMS`;
+    }
+    msg.addEventListener('input', updateCounter);
 
-                // Check if there are any session or database callbacks
-                if (data.session_callbacks.length === 0 && !data.db_callback) {
-                    $('#callback-list').append(`
-                        <li class="empty-report">No delivery report available yet.</li>
-                    `);
-                    return;
-                }
-
-                // Display the session callbacks (if any)
-                if (data.session_callbacks.length > 0) {
-                    data.session_callbacks.forEach(function(item) {
-                        $('#callback-list').append(`
-                            <li class="list-group-item">
-                                <span class="label">Session Data</span>: ${JSON.stringify(item)}
-                            </li>
-                        `);
-                    });
-                }
-
-                // Display the database callback (if any)
-                if (data.db_callback) {
-                    $('#callback-list').append(`
-                        <li class="list-group-item">
-                            <span class="label">Destination:</span> ${data.db_callback.phone_number}<br>
-                            <span class="label">Mid:</span> ${data.db_callback.message}<br>
-                            <span class="label">Status:</span> ${data.db_callback.status}<br>
-                            <span class="label">Timestamp:</span> ${data.db_callback.timestamp}
-                        </li>
-                    `);
-                }
-            },
-            error: function(error) {
-                console.error('Error fetching callbacks:', error);
-            }
-        });
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s ?? '';
+        return d.innerHTML;
     }
 
-    // Set an interval to fetch callbacks every 5 seconds
-    setInterval(fetchCallbacks, 5000);
+    async function loadHistory() {
+        try {
+            const res = await fetch('{% url "message_history" %}');
+            const data = await res.json();
+            const body = document.querySelector('#history tbody');
+            if (!data.messages.length) {
+                body.innerHTML = '<tr><td colspan="7" class="text-muted">No messages sent yet.</td></tr>';
+                return;
+            }
+            body.innerHTML = data.messages.map(m => `
+                <tr>
+                    <td>${esc(new Date(m.created_at).toLocaleString())}</td>
+                    <td>${esc(m.sender_id)}</td>
+                    <td>${esc(m.msisdn)}</td>
+                    <td>${esc(m.text.length > 40 ? m.text.slice(0, 40) + '…' : m.text)}</td>
+                    <td><span class="status ${esc(m.status)}">${esc(m.status)}</span></td>
+                    <td>${esc(m.network)}</td>
+                    <td>${esc(m.delivered_at)}</td>
+                </tr>`).join('');
+        } catch (e) {
+            console.error('Failed to load history', e);
+        }
+    }
+    loadHistory();
+    setInterval(loadHistory, 5000);
 </script>
-
 </body>
 </html>

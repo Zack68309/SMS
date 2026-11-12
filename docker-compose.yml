@@ -1,0 +1,23 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - sms_data:/app/data
+    restart: unless-stopped
+
+  # Public HTTPS URL for demos and callbacks (Cloudflare quick tunnel, no account needed).
+  # Start with:  docker compose --profile tunnel up --build
+  # Then find the URL with:  docker compose logs tunnel | grep trycloudflare
+  tunnel:
+    image: cloudflare/cloudflared:2025.11.1
+    command: tunnel --no-autoupdate --url http://app:8000
+    depends_on:
+      - app
+    profiles: ["tunnel"]
+    restart: unless-stopped
+
+volumes:
+  sms_data:
